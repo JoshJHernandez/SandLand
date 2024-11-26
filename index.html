@@ -115,6 +115,21 @@
                 width: 100%;
             }
         }
+        /* Home Page Background Image */
+        #home {
+            background: url('sandlandfactory.jpg') no-repeat center center;
+            background-size: cover;
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+        }
+        #home-content {
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 20px;
+        }
     </style>
     <script>
         let cart = [];
@@ -181,8 +196,14 @@
             const product = products[productIndex];
 
             if (quantity > 0) {
-                const totalPrice = product.pricePerPound * quantity;
-                cart.push({ ...product, quantity, totalPrice });
+                const existingProductIndex = cart.findIndex(item => item.name === product.name);
+                if (existingProductIndex !== -1) {
+                    cart[existingProductIndex].quantity += quantity;
+                    cart[existingProductIndex].totalPrice += product.pricePerPound * quantity;
+                } else {
+                    const totalPrice = product.pricePerPound * quantity;
+                    cart.push({ ...product, quantity, totalPrice });
+                }
                 updateCart();
                 quantityInput.value = '1';
                 showPopup(`${product.name} (${quantity.toLocaleString('en-US')} lbs) added to your cart!`);
@@ -394,8 +415,11 @@
     <div class="container">
         <!-- Home -->
         <div id="home" class="page">
-            <h2>Welcome to SandLand</h2>
-            <p>Explore premium sand products tailored for your needs.</p>
+            <div id="home-content">
+                <h2>Welcome to SandLand</h2>
+                <p>Explore premium sand products tailored for your needs.</p>
+                <p>Six students from FGCU set out to create a website for industries from around the world to easily access and purchase sand from a reputable company. SandLand was born with the mission to provide premium bulk sand for all kinds of projects, from construction to gardening and beyond.</p>
+            </div>
         </div>
         <!-- Products -->
         <div id="products" class="page hidden">
@@ -417,11 +441,11 @@
             </div>
             <div>
                 <input type="radio" id="two-day-air" name="shipping-option" value="2-day" onclick="calculateShipping()">
-                2 Day Air - 75% 
+                <label for="two-day-air">2 Day Air - Estimated Time: 2 days</label>
             </div>
             <div>
                 <input type="radio" id="next-day" name="shipping-option" value="next-day" onclick="calculateShipping()">
-                Next Day - 200% 
+                <label for="next-day">Next Day - Estimated Time: 1 day</label>
             </div><br>
 
             <button id="readd-button" class="btn" onclick="reAddToCart()">↺ Re-Add Removed Items</button>
