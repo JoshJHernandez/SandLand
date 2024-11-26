@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SandLand</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5deb3; /* Sand tone */
+            color: #4b3f2f; /* Warm brown for text */
+        }
+        header, footer {
+            background-color: #d2b48c; /* Tan */
+            color: #4b3f2f;
+            text-align: center;
+            padding: 1em 0;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+        nav a {
+            text-decoration: none;
+            color: #8b4513; /* SaddleBrown */
+            font-weight: bold;
+            cursor: pointer;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        .container {
+            padding: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            color: white;
+            background-color: #8b4513;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #a0522d; /* Sienna */
+        }
+        .product {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px;
+            width: 30%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .product img {
+            max-width: 100%;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .product input {
+            width: 60px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        #products-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-around;
+        }
+        #readd-button {
+            display: none;
+            align-items: center;
+            gap: 5px;
+        }
+        .error {
+            color: red;
+            font-size: 0.9em;
+        }
+        #popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #8b4513;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 1000;
+        }
+        #popup.visible {
+            opacity: 1;
+        }
+        /* Responsive Styles */
+        @media (max-width: 600px) {
+            nav {
+                flex-direction: column;
+                align-items: center;
+            }
+            .product {
+                width: 100%;
+            }
+        }
+    </style>
+    <script>
+        let cart = [];
+        let recentlyRemoved = [];
+        let promoApplied = false;
+        let discount = 0;
+        let ticketNumber = 1;
+        let shippingCost = 0;
+
+        const products = [
+            { name: 'Very Fine Sand', pricePerPound: 1.50, description: 'Ideal for crafts, children’s play areas, and creating smooth surfaces for delicate projects.' },
+            { name: 'Fine Sand', pricePerPound: 1.25, description: 'Perfect for landscaping projects, sandboxes, and making mortar mixes for construction.' },
+            { name: 'Medium Sand', pricePerPound: 1.00, description: 'Suitable for construction purposes, filling gaps, and general gardening use.' },
+            { name: 'Coarse Sand', pricePerPound: 0.75, description: 'Great for drainage, base material for pavers, and creating a stable foundation for construction projects.' },
+            { name: 'Very Coarse Sand', pricePerPound: 0.50, description: 'Excellent for improving soil aeration, drainage in potted plants, and as a base layer for hardscaping.' }
+        ];
+
+        const taxRateFlorida = 0.06;
+
+        function show(shown) {
+            const sections = document.querySelectorAll(".page");
+            sections.forEach((section) => section.classList.add("hidden"));
+            document.getElementById(shown).classList.remove("hidden");
+        }
+
+        function formatCardNumber(input) {
+            input.value = input.value
+                .replace(/\D/g, '') // Remove non-numeric characters
+                .replace(/(.{4})/g, '$1-') // Add hyphen after every 4 digits
+                .replace(/-$/, ''); // Remove trailing hyphen
+        }
+
+        function formatExpDate(input) {
+            input.value = input.value
+                .replace(/\D/g, '') // Remove non-numeric characters
+                .replace(/(\d{2})(\d{0,2})/, '$1/$2') // Add '/' after MM, if YY is partially entered
+                .slice(0, 5); // Ensure max length of 5 (MM/YY)
+        }
+
+        function formatQuantity(input) {
+            input.value = input.value.replace(/\D/g, ''); // Remove non-numeric characters
+            if (input.value) {
+                input.value = parseInt(input.value).toLocaleString('en-US');
+            }
+        }
+
+        function displayProducts() {
+            const productsContainer = document.getElementById('products-list');
+            productsContainer.innerHTML = products.map((product, index) => `
+                <div class="product">
+                    <h3>${product.name}</h3>
+                    <p>${product.description}</p>
+                    <p>Price: $${product.pricePerPound.toFixed(2)} per lb</p>
+                    <label for="quantity-${index}">Quantity (lbs):</label>
+                    <input type="text" id="quantity-${index}" min="1" value="1" oninput="formatQuantity(this)">
+                    <button class="btn" onclick="addToCart(${index})">Add to Cart</button>
+                </div>
+            `).join('');
+        }
+
+        function addToCart(productIndex) {
+            const quantityInput = document.getElementById(`quantity-${productIndex}`);
+            const quantity = parseInt(quantityInput.value.replace(/,/g, ''));
+            const product = products[productIndex];
+
+            if (quantity > 0) {
+                const totalPrice = product.pricePerPound * quantity;
+                cart.push({ ...product, quantity, totalPrice });
+                updateCart();
+                quantityInput.value = '1';
+                showPopup(`${product.name} (${quantity.toLocaleString('en-US')} lbs) added to your cart!`);
+            } else {
+                showPopup('Invalid quantity. Please select a valid amount.');
+            }
+        }
+
+        function removeFromCart(index) {
+            const removedItem = cart.splice(index, 1)[0];
+            recentlyRemoved.push(removedItem);
+            updateCart();
+            toggleReAddButton();
+            showPopup(`${removedItem.name} removed from your cart.`);
+        }
+
+        function toggleReAddButton() {
+            const readdButton = document.getElementById('readd-button');
+            if (recentlyRemoved.length > 0) {
+                readdButton.style.display = 'inline-block';
+            } else {
+                readdButton.style.display = 'none';
+            }
+        }
+
+        function reAddToCart() {
+            if (recentlyRemoved.length > 0) {
+                const item = recentlyRemoved.shift();
+                cart.push(item);
+                updateCart();
+                toggleReAddButton();
+                showPopup(`${item.name} re-added to your cart.`);
+            } else {
+                showPopup('No recently removed items to re-add.');
+            }
+        }
+
+        function applyPromoCode() {
+            const promoCode = document.getElementById('promo-code').value.trim();
+            if (promoApplied) {
+                showPopup('Promo code already applied.');
+                return;
+            }
+            if (promoCode === 'SANDLAND24') {
+                promoApplied = true;
+                discount = 0.2;
+                updateCart();
+                showPopup('Promo code applied! 20% discount.');
+            } else {
+                showPopup('Invalid promo code.');
+            }
+        }
+
+        function formatNumberWithCommas(number) {
+            return number.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function calculateShipping() {
+            const shippingOption = document.querySelector('input[name="shipping-option"]:checked').value;
+            if (shippingOption === 'free') {
+                shippingCost = 0;
+            } else if (shippingOption === '2-day') {
+                shippingCost = 15.00 * 1.75; // 75% more for 2-day air
+            } else if (shippingOption === 'next-day') {
+                shippingCost = 25.00 * 3.00; // 200% more for next-day
+            }
+            updateCart();
+        }
+
+        function updateCart() {
+            const cartContent = document.getElementById('cart-content');
+            if (cart.length === 0) {
+                cartContent.innerHTML = "<p>No items in your cart yet.</p>";
+            } else {
+                let subtotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
+                let discountedSubtotal = promoApplied ? subtotal * (1 - discount) : subtotal;
+                let tax = discountedSubtotal * taxRateFlorida;
+                let total = discountedSubtotal + tax + shippingCost;
+
+                cartContent.innerHTML = cart.map((item, index) => `
+                    <div>
+                        ${item.name} - ${item.quantity.toLocaleString('en-US')} lbs ($${formatNumberWithCommas(item.totalPrice)})
+                        <button onclick="removeFromCart(${index})">Remove</button>
+                    </div>
+                `).join('') + `
+                    <p><strong>Subtotal:</strong> $${formatNumberWithCommas(subtotal)}</p>
+                    ${promoApplied ? `<p><strong>Discount (20%):</strong> -$${formatNumberWithCommas(subtotal * discount)}</p>` : ''}
+                    <p><strong>Shipping Cost:</strong> $${formatNumberWithCommas(shippingCost)}</p>
+                    <p><strong>Tax (6%):</strong> $${formatNumberWithCommas(tax)}</p>
+                    <p><strong>Total:</strong> $${formatNumberWithCommas(total)}</p>
+                `;
+            }
+        }
+
+        function showPopup(message) {
+            const popup = document.getElementById('popup');
+            popup.textContent = message;
+            popup.classList.add('visible');
+            setTimeout(() => {
+                popup.classList.remove('visible');
+            }, 3000);
+        }
+
+        function checkout() {
+            if (cart.length === 0) {
+                showPopup('Your cart is empty. Add items to proceed to checkout.');
+                return;
+            }
+            const summaryContent = document.getElementById('checkout-summary');
+            let subtotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
+            let discountedSubtotal = promoApplied ? subtotal * (1 - discount) : subtotal;
+            let tax = discountedSubtotal * taxRateFlorida;
+            let total = discountedSubtotal + tax + shippingCost;
+
+            summaryContent.innerHTML = cart.map(item => `
+                <div>${item.name} - ${item.quantity.toLocaleString('en-US')} lbs ($${formatNumberWithCommas(item.totalPrice)})</div>
+            `).join('') + `
+                <p><strong>Subtotal:</strong> $${formatNumberWithCommas(subtotal)}</p>
+                ${promoApplied ? `<p><strong>Discount (20%):</strong> -$${formatNumberWithCommas(subtotal * discount)}</p>` : ''}
+                <p><strong>Shipping Cost:</strong> $${formatNumberWithCommas(shippingCost)}</p>
+                <p><strong>Tax (6%):</strong> $${formatNumberWithCommas(tax)}</p>
+                <p><strong>Total:</strong> $${formatNumberWithCommas(total)}</p>
+            `;
+            show('checkout');
+        }
+
+        function submitOrder(event) {
+            event.preventDefault();
+
+            // Validation flags
+            let isValid = true;
+
+            // Clear previous error messages
+            const errorElements = document.querySelectorAll(".error");
+            errorElements.forEach((error) => error.textContent = "");
+
+            // Validate card number
+            const cardNumber = document.getElementById("card-number").value.replace(/-/g, '');
+            if (!/^\d{16,19}$/.test(cardNumber)) {
+                document.getElementById("card-number-error").textContent = "Invalid card number. Must be 16-19 digits.";
+                isValid = false;
+            }
+
+            // Validate expiration date
+            const expDate = document.getElementById("exp-date").value.replace(/\s+/g, ''); // Remove whitespace
+            if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expDate)) {
+                document.getElementById("exp-date-error").textContent = "Invalid expiration date. Please use MM/YY format with a valid month (01-12).";
+                isValid = false;
+            }
+
+            // Validate CVV
+            const cvv = document.getElementById("cvv").value;
+            if (!/^\d{3,4}$/.test(cvv)) {
+                document.getElementById("cvv-error").textContent = "Invalid CVV. Must be 3-4 digits.";
+                isValid = false;
+            }
+
+            if (isValid) {
+                show("thank-you");
+                cart = [];
+                recentlyRemoved = [];
+                updateCart();
+                toggleReAddButton();
+
+                // Clear checkout input fields
+                document.getElementById("email").value = '';
+                document.getElementById("address").value = '';
+                document.getElementById("card-name").value = '';
+                document.getElementById("card-number").value = '';
+                document.getElementById("exp-date").value = '';
+                document.getElementById("cvv").value = '';
+                document.getElementById("promo-code").value = '';
+            }
+        }
+
+        function createTicket(event) {
+            event.preventDefault();
+            const ticketMessage = document.getElementById('ticket-message').value;
+            const ticketEmail = document.getElementById('ticket-email').value;
+            if (ticketMessage.trim() !== '' && ticketEmail.trim() !== '') {
+                ticketNumber++;
+                show('ticket-created');
+                document.getElementById('ticket-info').innerHTML = `Ticket Created, Ticket #${ticketNumber - 1}, has been created and will be reviewed by our top experts. Whether they get back to you on the ticket is a gamble, so don't go expecting a response! :)`;
+                document.getElementById('ticket-message').value = '';
+                document.getElementById('ticket-email').value = '';
+            } else {
+                showPopup('Please enter both a message and an email address before creating a ticket.');
+            }
+        }
+
+        window.onload = () => {
+            displayProducts();
+            calculateShipping();
+        };
+    </script>
+</head>
+<body>
+    <header>
+        <h1 onclick="show('home')" style="cursor: pointer;">SandLand</h1>
+        <p>Your bulk sand supplier for all industries</p>
+    </header>
+    <nav>
+        <a onclick="show('home')">Home</a>
+        <a onclick="show('products')">Products</a>
+        <a onclick="show('cart')">Shopping Cart</a>
+        <a onclick="show('login')">Login</a>
+        <a onclick="show('support')">Support</a>
+    </nav>
+    <div class="container">
+        <!-- Home -->
+        <div id="home" class="page">
+            <h2>Welcome to SandLand</h2>
+            <p>Explore premium sand products tailored for your needs.</p>
+        </div>
+        <!-- Products -->
+        <div id="products" class="page hidden">
+            <h2>Products</h2>
+            <div id="products-list"></div>
+        </div>
+        <!-- Cart -->
+        <div id="cart" class="page hidden">
+            <h2>Your Shopping Cart</h2>
+            <div id="cart-content"></div>
+            <label for="promo-code">Promo Code:</label>
+            <input type="text" id="promo-code" placeholder="Enter promo code">
+            <button class="btn" onclick="applyPromoCode()">Apply</button>
+
+            <h3>Shipping Options</h3>
+            <div>
+                <input type="radio" id="free-shipping" name="shipping-option" value="free" onclick="calculateShipping()" checked>
+                <label for="free-shipping">Free Shipping - Estimated Time: 365 days</label>
+            </div>
+            <div>
+                <input type="radio" id="two-day-air" name="shipping-option" value="2-day" onclick="calculateShipping()">
+                2 Day Air - 75% 
+            </div>
+            <div>
+                <input type="radio" id="next-day" name="shipping-option" value="next-day" onclick="calculateShipping()">
+                Next Day - 200% 
+            </div><br>
+
+            <button id="readd-button" class="btn" onclick="reAddToCart()">↺ Re-Add Removed Items</button>
+            <button class="btn" onclick="show('products')">Back to Products</button>
+            <button class="btn" onclick="checkout()">Proceed to Checkout</button>
+        </div>
+        <!-- Checkout -->
+        <div id="checkout" class="page hidden">
+            <h2>Checkout</h2>
+            <div id="checkout-summary"></div>
+            <form onsubmit="submitOrder(event)">
+                <h3>Shipping Information</h3>
+                <label for="email">Email Address:</label>
+                <input type="email" id="email" name="email" placeholder="example@email.com" required><br><br>
+                <label for="address">Shipping Address:</label>
+                <textarea id="address" name="address" placeholder="1234 Main St, City, State, ZIP" required></textarea><br><br>
+
+                <h3>Billing Information</h3>
+                <label for="card-name">Name on Card:</label>
+                <input type="text" id="card-name" placeholder="John Doe" required><br><br>
+
+                <label for="card-number">Card Number:</label>
+                <input type="text" id="card-number" oninput="formatCardNumber(this)" placeholder="1234-5678-9012-3456" maxlength="19" required>
+                <p id="card-number-error" class="error"></p><br>
+
+                <label for="exp-date">Expiration Date:</label>
+                <input type="text" id="exp-date" oninput="formatExpDate(this)" placeholder="MM/YY" maxlength="5" required>
+                <p id="exp-date-error" class="error"></p><br>
+
+                <label for="cvv">CVV:</label>
+                <input type="text" id="cvv" maxlength="4" placeholder="123" required oninput="this.value = this.value.replace(/\D/g, '')">
+                <p id="cvv-error" class="error"></p><br>
+
+                <button type="submit" class="btn">Submit Order</button>
+            </form>
+        </div>
+        <!-- Thank You -->
+        <div id="thank-you" class="page hidden">
+            <h2>Thank You!</h2>
+            <p>Your order has been placed successfully. Check your email for a confirmation.</p>
+            <button class="btn" onclick="show('home')">Return to Home</button>
+        </div>
+        <!-- Login -->
+        <div id="login" class="page hidden">
+            <h2>Login</h2>
+            <form>
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" placeholder="Username" required><br><br>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" placeholder="Password" required><br><br>
+                <button type="submit" class="btn">Login</button>
+            </form>
+        </div>
+        <!-- Support -->
+        <div id="support" class="page hidden">
+            <h2>Support</h2>
+            <form onsubmit="createTicket(event)">
+                <label for="ticket-message">Describe your issue:</label><br>
+                <textarea id="ticket-message" rows="5" placeholder="Enter your message here..." required></textarea><br><br>
+                <label for="ticket-email">Email Address:</label><br>
+                <input type="email" id="ticket-email" placeholder="example@email.com" required><br><br>
+                <button type="submit" class="btn">Create Ticket</button>
+            </form>
+        </div>
+        <!-- Ticket Created -->
+        <div id="ticket-created" class="page hidden">
+            <h2>Support Ticket Created</h2>
+            <p id="ticket-info"></p>
+            <button class="btn" onclick="show('home')">Return to Home</button>
+        </div>
+    </div>
+    <footer>
+        <p>&copy; 2024 SandLand. All rights reserved.</p>
+    </footer>
+    <div id="popup"></div>
+</body>
+</html>
