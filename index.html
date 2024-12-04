@@ -5,20 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SandLand</title>
     <style>
-        /* General Styles */
+        /* General styles for the whole page */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f5deb3; /* Sand tone */
-            color: #4b3f2f; /* Warm brown for text */
+            background-color: #f5deb3; /* Sand tone background color for a desert-like feel */
+            color: #4b3f2f; /* Warm brown color for the text */
         }
+        
+        /* Styling for the header and footer */
         header, footer {
-            background-color: #d2b48c; /* Tan */
+            background-color: #d2b48c; /* Tan color for the header and footer */
             color: #4b3f2f;
             text-align: center;
             padding: 1em 0;
         }
+        
+        /* Navigation menu styles */
         nav {
             display: flex;
             justify-content: center;
@@ -27,19 +31,25 @@
         }
         nav a {
             text-decoration: none;
-            color: #8b4513; /* SaddleBrown */
+            color: #8b4513; /* SaddleBrown color for the links */
             font-weight: bold;
             cursor: pointer;
         }
         nav a:hover {
-            text-decoration: underline;
+            text-decoration: underline; /* Underlines links when hovered over */
         }
+        
+        /* Container for main content */
         .container {
             padding: 20px;
         }
+        
+        /* Class to hide sections */
         .hidden {
             display: none;
         }
+        
+        /* Button styling for better visibility */
         .btn {
             display: inline-block;
             padding: 10px 20px;
@@ -51,8 +61,10 @@
             cursor: pointer;
         }
         .btn:hover {
-            background-color: #a0522d; /* Sienna */
+            background-color: #a0522d; /* Changes color on hover to indicate interaction */
         }
+        
+        /* Product box styling to organize items */
         .product {
             border: 1px solid #ccc;
             border-radius: 5px;
@@ -74,21 +86,29 @@
             text-align: center;
             margin-top: 10px;
         }
+        
+        /* Products container styling */
         #products-list {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
             justify-content: space-around;
         }
+        
+        /* Re-add button to allow restoring removed items */
         #readd-button {
             display: none;
             align-items: center;
             gap: 5px;
         }
+        
+        /* Error message styling */
         .error {
             color: red;
             font-size: 0.9em;
         }
+        
+        /* Popup message for adding/removing items */
         #popup {
             position: fixed;
             top: 20px;
@@ -105,7 +125,8 @@
         #popup.visible {
             opacity: 1;
         }
-        /* Responsive Styles */
+        
+        /* Responsive styles for smaller screens */
         @media (max-width: 600px) {
             nav {
                 flex-direction: column;
@@ -115,7 +136,8 @@
                 width: 100%;
             }
         }
-        /* Home Page Background Image */
+        
+        /* Styling for the home page background */
         #home {
             background: url('sandlandfactory.jpg') no-repeat center center;
             background-size: cover;
@@ -132,13 +154,15 @@
         }
     </style>
     <script>
-        let cart = [];
-        let recentlyRemoved = [];
-        let promoApplied = false;
-        let discount = 0;
-        let ticketNumber = 1;
-        let shippingCost = 0;
+        // Global variables for storing shopping cart and other information
+        let cart = []; // Stores items added to the shopping cart
+        let recentlyRemoved = []; // Stores items that were recently removed from the cart
+        let promoApplied = false; // Tracks if a promo code has been applied
+        let discount = 0; // Stores the discount percentage if a promo code is used
+        let ticketNumber = 1; // Tracks the number of support tickets created
+        let shippingCost = 0; // Stores the calculated shipping cost
 
+        // Product data, including name, price, and description
         const products = [
             { name: 'Very Fine Sand', pricePerPound: 1.50, description: 'Ideal for crafts, children’s play areas, and creating smooth surfaces for delicate projects.' },
             { name: 'Fine Sand', pricePerPound: 1.25, description: 'Perfect for landscaping projects, sandboxes, and making mortar mixes for construction.' },
@@ -147,14 +171,16 @@
             { name: 'Very Coarse Sand', pricePerPound: 0.50, description: 'Excellent for improving soil aeration, drainage in potted plants, and as a base layer for hardscaping.' }
         ];
 
-        const taxRateFlorida = 0.06;
+        const taxRateFlorida = 0.06; // Sales tax rate for Florida
 
+        // Function to show the specified page and hide the others
         function show(shown) {
             const sections = document.querySelectorAll(".page");
             sections.forEach((section) => section.classList.add("hidden"));
             document.getElementById(shown).classList.remove("hidden");
         }
 
+        // Function to format credit card input to make it readable
         function formatCardNumber(input) {
             input.value = input.value
                 .replace(/\D/g, '') // Remove non-numeric characters
@@ -162,6 +188,7 @@
                 .replace(/-$/, ''); // Remove trailing hyphen
         }
 
+        // Function to format the expiration date of the credit card
         function formatExpDate(input) {
             input.value = input.value
                 .replace(/\D/g, '') // Remove non-numeric characters
@@ -169,6 +196,7 @@
                 .slice(0, 5); // Ensure max length of 5 (MM/YY)
         }
 
+        // Function to format the quantity input to make it user-friendly
         function formatQuantity(input) {
             input.value = input.value.replace(/\D/g, ''); // Remove non-numeric characters
             if (input.value) {
@@ -176,6 +204,7 @@
             }
         }
 
+        // Function to display the products on the product page
         function displayProducts() {
             const productsContainer = document.getElementById('products-list');
             productsContainer.innerHTML = products.map((product, index) => `
@@ -190,12 +219,14 @@
             `).join('');
         }
 
+        // Function to add a product to the cart
         function addToCart(productIndex) {
             const quantityInput = document.getElementById(`quantity-${productIndex}`);
             const quantity = parseInt(quantityInput.value.replace(/,/g, ''));
             const product = products[productIndex];
 
             if (quantity > 0) {
+                // Check if the product is already in the cart, if yes, update its quantity and total price
                 const existingProductIndex = cart.findIndex(item => item.name === product.name);
                 if (existingProductIndex !== -1) {
                     cart[existingProductIndex].quantity += quantity;
@@ -205,21 +236,25 @@
                     cart.push({ ...product, quantity, totalPrice });
                 }
                 updateCart();
-                quantityInput.value = '1';
+                quantityInput.value = '1'; // Reset quantity input to 1 after adding to cart
                 showPopup(`${product.name} (${quantity.toLocaleString('en-US')} lbs) added to your cart!`);
+                calculateShipping();
             } else {
                 showPopup('Invalid quantity. Please select a valid amount.');
             }
         }
 
+        // Function to remove a product from the cart
         function removeFromCart(index) {
             const removedItem = cart.splice(index, 1)[0];
-            recentlyRemoved.push(removedItem);
+            recentlyRemoved.push(removedItem); // Add the removed item to the recentlyRemoved array
             updateCart();
             toggleReAddButton();
             showPopup(`${removedItem.name} removed from your cart.`);
+            calculateShipping();
         }
 
+        // Function to show/hide the button for re-adding removed items
         function toggleReAddButton() {
             const readdButton = document.getElementById('readd-button');
             if (recentlyRemoved.length > 0) {
@@ -229,6 +264,7 @@
             }
         }
 
+        // Function to re-add the most recently removed item back to the cart
         function reAddToCart() {
             if (recentlyRemoved.length > 0) {
                 const item = recentlyRemoved.shift();
@@ -236,11 +272,13 @@
                 updateCart();
                 toggleReAddButton();
                 showPopup(`${item.name} re-added to your cart.`);
+                calculateShipping();
             } else {
                 showPopup('No recently removed items to re-add.');
             }
         }
 
+        // Function to apply a promo code for a discount
         function applyPromoCode() {
             const promoCode = document.getElementById('promo-code').value.trim();
             if (promoApplied) {
@@ -249,30 +287,35 @@
             }
             if (promoCode === 'SANDLAND24') {
                 promoApplied = true;
-                discount = 0.2;
+                discount = 0.2; // Set discount to 20%
                 updateCart();
                 showPopup('Promo code applied! 20% discount.');
+                calculateShipping();
             } else {
                 showPopup('Invalid promo code.');
             }
         }
 
+        // Function to add commas to numbers to make them easier to read
         function formatNumberWithCommas(number) {
             return number.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
+        // Function to calculate the shipping cost based on user selection
         function calculateShipping() {
             const shippingOption = document.querySelector('input[name="shipping-option"]:checked').value;
+            const subtotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
             if (shippingOption === 'free') {
                 shippingCost = 0;
             } else if (shippingOption === '2-day') {
-                shippingCost = 15.00 * 1.75; // 75% more for 2-day air
+                shippingCost = subtotal * 0.75; // 75% of the subtotal for 2-day air
             } else if (shippingOption === 'next-day') {
-                shippingCost = 25.00 * 3.00; // 200% more for next-day
+                shippingCost = subtotal * 2.00; // 200% of the subtotal for next-day
             }
             updateCart();
         }
 
+        // Function to update the shopping cart summary
         function updateCart() {
             const cartContent = document.getElementById('cart-content');
             if (cart.length === 0) {
@@ -298,15 +341,17 @@
             }
         }
 
+        // Function to show a temporary popup message
         function showPopup(message) {
             const popup = document.getElementById('popup');
             popup.textContent = message;
             popup.classList.add('visible');
             setTimeout(() => {
                 popup.classList.remove('visible');
-            }, 3000);
+            }, 3000); // The popup will disappear after 3 seconds
         }
 
+        // Function to proceed to checkout
         function checkout() {
             if (cart.length === 0) {
                 showPopup('Your cart is empty. Add items to proceed to checkout.');
@@ -330,6 +375,7 @@
             show('checkout');
         }
 
+        // Function to validate and submit the order form
         function submitOrder(event) {
             event.preventDefault();
 
@@ -363,8 +409,8 @@
 
             if (isValid) {
                 show("thank-you");
-                cart = [];
-                recentlyRemoved = [];
+                cart = []; // Clear the cart after successful order
+                recentlyRemoved = []; // Clear recently removed items
                 updateCart();
                 toggleReAddButton();
 
@@ -379,6 +425,7 @@
             }
         }
 
+        // Function to create a support ticket
         function createTicket(event) {
             event.preventDefault();
             const ticketMessage = document.getElementById('ticket-message').value;
@@ -394,9 +441,10 @@
             }
         }
 
+        // Function to initialize the page on load
         window.onload = () => {
-            displayProducts();
-            calculateShipping();
+            displayProducts(); // Display all products on the product page
+            calculateShipping(); // Calculate initial shipping cost
         };
     </script>
 </head>
@@ -413,20 +461,20 @@
         <a onclick="show('support')">Support</a>
     </nav>
     <div class="container">
-        <!-- Home -->
+        <!-- Home section, contains an introduction -->
         <div id="home" class="page">
             <div id="home-content">
                 <h2>Welcome to SandLand</h2>
                 <p>Explore premium sand products tailored for your needs.</p>
-                <p>Six students from FGCU set out to create a website for industries from around the world to easily access and purchase sand from a reputable company. SandLand was born with the mission to provide premium bulk sand for all kinds of projects, from construction to water purification and beyond.</p>
+                <p>Six students from FGCU set out to create a website for industries from around the world to easily access and purchase sand from a reputable company. SandLand was born with the mission to provide premium bulk sand for all kinds of projects, from construction to gardening and beyond.</p>
             </div>
         </div>
-        <!-- Products -->
+        <!-- Products section, displays the products available for purchase -->
         <div id="products" class="page hidden">
             <h2>Products</h2>
             <div id="products-list"></div>
         </div>
-        <!-- Cart -->
+        <!-- Shopping cart section, shows items added to cart -->
         <div id="cart" class="page hidden">
             <h2>Your Shopping Cart</h2>
             <div id="cart-content"></div>
@@ -435,24 +483,25 @@
             <button class="btn" onclick="applyPromoCode()">Apply</button>
 
             <h3>Shipping Options</h3>
+            <!-- User can select different shipping options -->
             <div>
                 <input type="radio" id="free-shipping" name="shipping-option" value="free" onclick="calculateShipping()" checked>
                 <label for="free-shipping">Free Shipping - Estimated Time: 365 days</label>
             </div>
             <div>
                 <input type="radio" id="two-day-air" name="shipping-option" value="2-day" onclick="calculateShipping()">
-                <label for="two-day-air">2 Day Air - Estimated Time: 2 days</label>
+                <label for="two-day-air">2 Day Air - 75% more expensive</label>
             </div>
             <div>
                 <input type="radio" id="next-day" name="shipping-option" value="next-day" onclick="calculateShipping()">
-                <label for="next-day">Next Day - Estimated Time: 1 day</label>
+                <label for="next-day">Next Day - 200% more expensive</label>
             </div><br>
 
             <button id="readd-button" class="btn" onclick="reAddToCart()">↺ Re-Add Removed Items</button>
             <button class="btn" onclick="show('products')">Back to Products</button>
             <button class="btn" onclick="checkout()">Proceed to Checkout</button>
         </div>
-        <!-- Checkout -->
+        <!-- Checkout section for entering payment and shipping details -->
         <div id="checkout" class="page hidden">
             <h2>Checkout</h2>
             <div id="checkout-summary"></div>
@@ -482,13 +531,13 @@
                 <button type="submit" class="btn">Submit Order</button>
             </form>
         </div>
-        <!-- Thank You -->
+        <!-- Thank you section after successful checkout -->
         <div id="thank-you" class="page hidden">
             <h2>Thank You!</h2>
             <p>Your order has been placed successfully. Check your email for a confirmation.</p>
             <button class="btn" onclick="show('home')">Return to Home</button>
         </div>
-        <!-- Login -->
+        <!-- Login section for users to log in -->
         <div id="login" class="page hidden">
             <h2>Login</h2>
             <form>
@@ -499,7 +548,7 @@
                 <button type="submit" class="btn">Login</button>
             </form>
         </div>
-        <!-- Support -->
+        <!-- Support section for creating a support ticket -->
         <div id="support" class="page hidden">
             <h2>Support</h2>
             <form onsubmit="createTicket(event)">
@@ -510,7 +559,7 @@
                 <button type="submit" class="btn">Create Ticket</button>
             </form>
         </div>
-        <!-- Ticket Created -->
+        <!-- Ticket created confirmation section -->
         <div id="ticket-created" class="page hidden">
             <h2>Support Ticket Created</h2>
             <p id="ticket-info"></p>
